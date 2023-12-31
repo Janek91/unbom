@@ -6,35 +6,39 @@
         <Version>3.2.0</Version>
 
         <OutputType>Exe</OutputType>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>unbom</ToolCommandName>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryUrl>https://github.com/ssg/unbom</RepositoryUrl>
-        
-        <Nullable>enable</Nullable>
+
+        <Nullable>disable</Nullable>
         <DebugType>embedded</DebugType>
 
         <PackageReleaseNotes>
-<![CDATA[
+            <![CDATA[
 - Report number of files processed.
 - Fix regression preventing wildcards from working.
 - Fix exception on missing directory.
 ]]>
         </PackageReleaseNotes>
-        <LangVersion>10.0</LangVersion>
+        <LangVersion>latest</LangVersion>
     </PropertyGroup>
     <PropertyGroup Condition="$(Configuration)=='Release'">
         <WarningsAsErrors>true</WarningsAsErrors>
     </PropertyGroup>
     <ItemGroup>
-      <None Remove="stylecop.json" />
+        <None Remove="stylecop.json" />
     </ItemGroup>
     <ItemGroup>
-      <AdditionalFiles Include="stylecop.json" />
+        <AdditionalFiles Include="stylecop.json" />
     </ItemGroup>
     <ItemGroup>
-      <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
-      <PackageReference Include="System.CommandLine.DragonFruit" Version="0.4.0-alpha.22272.1" />
+        <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+        <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+        <PackageReference Include="System.CommandLine.DragonFruit" Version="0.4.0-alpha.22272.1" />
+        <PackageReference Include="System.CommandLine.NamingConventionBinder" Version="2.0.0-beta4.22272.1" />
+        <PackageReference Include="System.CommandLine.Rendering" Version="0.4.0-alpha.22272.1" />
+        <PackageReference Include="UTF.Unknown" Version="2.5.1" />
     </ItemGroup>
 </Project>
