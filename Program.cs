@@ -4,7 +4,6 @@
 // </copyright>
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -16,16 +15,18 @@ public static class Program
 {
     private static readonly byte[] BOM = [0xEF, 0xBB, 0xBF];
     private static readonly Encoding UTF8WithoutBom = new UTF8Encoding(false);
+    private static readonly Encoding UTF8WithBom = new UTF8Encoding(true);
 
     /// <summary>
-    ///     Removes UTF-8 BOM markers from text files.
+    /// Removes UTF-8 BOM markers from text files.
     /// </summary>
     /// <param name="argument">Path to scan.</param>
     /// <param name="recurse">recurse subdirectories.</param>
     /// <param name="nobackup">do not save a backup file.</param>
-    public static void Main(string argument, bool recurse = false, bool nobackup = true)
+    /// <param name="setBOM">Add BOM marker</param>
+    public static void Main(string argument, bool recurse = false, bool nobackup = true, bool setBOM = false)
     {
-        Unbom(argument, recurse, nobackup);
+        Unbom(argument, recurse, nobackup, setBOM);
     }
 
     public static void RemoveBom(string fileName, bool nobackup)
@@ -37,16 +38,16 @@ public static class Program
 
         Console.Write($"{fileName}: BOM found - removing...");
 
-        using FileStream stream = File.OpenRead(fileName);
-        Span<byte> buffer = new byte[BOM.Length].AsSpan();
+        using var stream = File.OpenRead(fileName);
+        var buffer = new byte[BOM.Length].AsSpan();
         _ = stream.Read(buffer);
 
         // GetTempFileName also creates the file
-        string tempFileName = Path.GetTempFileName();
-        using FileStream outputStream = File.Create(tempName = tempFileName);
+        var tempFileName = Path.GetTempFileName();
+        using var outputStream = File.Create(tempName = tempFileName);
         stream.CopyTo(outputStream);
 
-        string backupName = fileName + ".bak";
+        var backupName = fileName + ".bak";
         File.Move(fileName, backupName, true);
         File.Move(tempName, fileName);
 
@@ -56,11 +57,11 @@ public static class Program
         Console.WriteLine("done");
     }
 
-    private static void Unbom(string path, bool recurse = false, bool noBackup = false)
+    private static void Unbom(string path, bool recurse, bool noBackup, bool setBOM)
     {
-        Debug.WriteLine($"path={path} recurse={recurse} nobackup={noBackup}");
+        Debug.WriteLine($"path={path} recurse={recurse} nobackup={noBackup} setBOM={setBOM}");
 
-        string pattern = Path.GetFileName(path);
+        var pattern = Path.GetFileName(path);
 
         if (string.IsNullOrEmpty(pattern))
             pattern = "*";
@@ -71,17 +72,16 @@ public static class Program
 
         try
         {
-            IEnumerable<string> files = Directory.EnumerateFiles(path, pattern, recurse
+            var files = Directory.EnumerateFiles(path, pattern, recurse
                 ? SearchOption.AllDirectories
                 : SearchOption.TopDirectoryOnly);
 
             var count = 0;
 
-            foreach (string fileName in files)
+            foreach (var fileName in files)
             {
                 //RemoveBom(fileName, noBackup);
-                ToUtfNoBom(fileName);
-                count++;
+                ToUtfNoBom(fileName, setBOM,ref count);
             }
 
             Console.WriteLine($"{count} file(s) processed");
@@ -92,16 +92,16 @@ public static class Program
         }
     }
 
-    private static void ToUtfNoBom(string fileName)
+    private static void ToUtfNoBom(string fileName, bool setBOM, ref int count)
     {
-        DetectionResult result = CharsetDetector.DetectFromFile(fileName);
-        DetectionDetail resultDetected = result.Detected;
+        var result = CharsetDetector.DetectFromFile(fileName);
+        var resultDetected = result.Detected;
 
-        string encodingName = resultDetected?.EncodingName;
-        bool isUtf8 = encodingName is "ascii" or "utf8" or "utf-8";
-        bool hasBOM = isUtf8 && resultDetected.HasBOM || HasBom(fileName);
+        var encodingName = resultDetected?.EncodingName;
+        var isUtf8 = encodingName is "ascii" or "utf8" or "utf-8";
+        var hasBOM = (isUtf8 && resultDetected.HasBOM) || HasBom(fileName);
 
-        if (isUtf8 && !hasBOM)
+        if (isUtf8 && ((setBOM && hasBOM) || (!setBOM && !hasBOM)))
             return;
 
         try
@@ -111,9 +111,10 @@ public static class Program
 
             Console.Write(message);
 
-            string content = File.ReadAllText(fileName);
-            File.WriteAllText(fileName, content, UTF8WithoutBom);
+            var content = File.ReadAllText(fileName);
+            File.WriteAllText(fileName, content, setBOM ? UTF8WithBom : UTF8WithoutBom);
             Console.WriteLine("done");
+            count++;
         }
         catch (Exception ex)
         {
@@ -123,11 +124,11 @@ public static class Program
 
     private static bool HasBom(string fileName)
     {
-        Span<byte> buffer = new byte[BOM.Length].AsSpan();
-        using FileStream stream = File.OpenRead(fileName);
+        var buffer = new byte[BOM.Length].AsSpan();
+        using var stream = File.OpenRead(fileName);
 
-        int bytesRead = stream.Read(buffer);
+        var bytesRead = stream.Read(buffer);
 
-        return bytesRead != buffer.Length || !buffer.SequenceEqual(BOM);
+        return bytesRead == buffer.Length && buffer.SequenceEqual(BOM);
     }
 }
